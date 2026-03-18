@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alignment Redesign Prototype</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f5f5f3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+h1 {
+  font-size: 15px;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 16px;
+  letter-spacing: 0.01em;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 860px;
+  max-width: 100%;
+  height: 600px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+
+/* Topbar */
+#topbar {
+  height: 44px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 8px;
+  background: #fff;
+  flex-shrink: 0;
+}
+.tb-label { font-size: 12px; color: #888; margin-right: 2px; }
+.tb-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #f7f7f5;
+  cursor: pointer;
+  color: #444;
+  transition: all 0.15s;
+}
+.tb-btn:hover { background: #efefec; }
+.tb-btn.active { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.tb-sep { width: 1px; height: 20px; background: #e5e5e5; margin: 0 4px; }
+#mode-label { font-size: 11px; color: #888; margin-left: auto; }
+
+/* Main */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+#sidebar {
+  width: 48px;
+  border-right: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  gap: 6px;
+  background: #fff;
+  flex-shrink: 0;
+}
+.tool-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #888;
+  transition: all 0.15s;
+  background: transparent;
+}
+.tool-btn:hover { background: #f5f5f3; color: #333; }
+.tool-btn.active { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.tool-btn svg { display: block; }
+
+/* Canvas wrap */
+#canvas-wrap {
+  flex: 1;
+  background: #f0f0ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+#canvas {
+  background: #fff;
+  box-shadow: 0 1px 10px rgba(0,0,0,0.1);
+  cursor: default;
+  display: block;
+}
+#nudge-toast {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(16,185,129,0.92);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+/* Right panel */
+#rightpanel {
+  width: 210px;
+  border-left: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.panel-section { padding: 12px 14px; border-bottom: 1px solid #f0f0ee; }
+.panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #444;
+}
+.panel-row input[type=number] {
+  width: 68px;
+  padding: 3px 7px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fafaf8;
+  color: #333;
+  outline: none;
+}
+.panel-row input[type=number]:focus { border-color: #93c5fd; }
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+}
+.align-btn {
+  padding: 5px 2px;
+  border-radius: 4px;
+  border: 1px solid #e5e5e5;
+  background: #f7f7f5;
+  cursor: pointer;
+  font-size: 10px;
+  text-align: center;
+  color: #666;
+  transition: all 0.15s;
+}
+.align-btn:hover { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.align-btn.highlighted {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.6);
+  color: rgb(5,150,105);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+
+#align-hint { font-size: 11px; color: #999; margin-bottom: 8px; }
+#theory-note { font-size: 11px; color: #888; line-height: 1.6; }
+#ref-list { font-size: 10px; color: #999; line-height: 1.5; margin-top: 10px; }
+#ref-list strong { color: #777; }
+
+/* Status bar */
+#statusbar {
+  height: 28px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 20px;
+  font-size: 11px;
+  color: #999;
+  background: #fff;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<h1>Alignment Redesign Prototype · Interactive Demo · COMP0160 Perception &amp; Interfaces</h1>
+
+<div id="app">
+  <div id="topbar">
+    <span class="tb-label">Compare modes</span>
+    <button class="tb-btn" id="btn-old" onclick="setMode('old')">Current design</button>
+    <button class="tb-btn active" id="btn-new" onclick="setMode('new')">Redesigned</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" onclick="addShape('rect')">＋ Rectangle</button>
+    <button class="tb-btn" onclick="addShape('text')">＋ Text</button>
+    <button class="tb-btn" onclick="addShape('circle')">＋ Circle</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" onclick="resetCanvas()">Reset</button>
+    <span id="mode-label">Redesigned: guide hierarchy + contextual nudge + centre anchor</span>
+  </div>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="tool-btn active" id="tool-select" title="Select" onclick="setTool('select')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 2l10 5-5 1-2 5z" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="tool-btn" title="Rectangle" onclick="addShape('rect');setTool('select')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <rect x="2" y="3" width="10" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="tool-btn" title="Text" onclick="addShape('text');setTool('select')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 3h10M7 3v8M4 11h6" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div class="tool-btn" title="Circle" onclick="addShape('circle');setTool('select')">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="nudge-toast"></div>
+    </div>
+
+    <div id="rightpanel">
+      <div class="panel-section">
+        <div class="panel-title">Position / Size</div>
+        <div class="panel-row"><span>X</span><input type="number" id="px" value="0" onchange="updateFromPanel()"></div>
+        <div class="panel-row"><span>Y</span><input type="number" id="py" value="0" onchange="updateFromPanel()"></div>
+        <div class="panel-row"><span>W</span><input type="number" id="pw" value="0" onchange="updateFromPanel()"></div>
+        <div class="panel-row"><span>H</span><input type="number" id="ph" value="0" onchange="updateFromPanel()"></div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Align</div>
+        <div id="align-hint">Double-click an object to set it as the alignment target</div>
+        <div class="panel-row" style="display:block;margin-bottom:10px;">
+          <div style="font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Alignment target</div>
+          <div id="anchor-label" style="font-size:12px;color:#444;background:#f8f8f6;border:1px solid #ecece8;border-radius:6px;padding:7px 8px;">None selected</div>
+        </div>
+        <div class="align-grid">
+          <button class="align-btn" id="ab-tl" onclick="applyAlign('left')">Left edges</button>
+          <button class="align-btn" id="ab-tc" onclick="applyAlign('center-h')">Horizontal centres</button>
+          <button class="align-btn" id="ab-tr" onclick="applyAlign('right')">Right edges</button>
+          <button class="align-btn" id="ab-ml" onclick="applyAlign('top')">Top edges</button>
+          <button class="align-btn" id="ab-mc" onclick="applyAlign('center-v')">Vertical centres</button>
+          <button class="align-btn" id="ab-mr" onclick="applyAlign('bottom')">Bottom edges</button>
+        </div>
+      </div>
+
+      <div class="panel-section" style="flex:1">
+        <div class="panel-title">Design rationale</div>
+        <div id="theory-note">Drag an object to compare the two modes.</div>
+        <div style="margin-top:12px;padding:8px;background:#f8f8f6;border-radius:6px">
+          <div style="font-size:10px;color:#aaa;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">Guide colour adaptation</div>
+          <div id="color-preview" style="display:flex;align-items:center;gap:8px;font-size:11px;color:#999">— Idle</div>
+        </div>
+        <div id="ref-list">
+          <strong>References</strong><br>
+          1. Temporal sensitivity in early visual processing (LGN / change sensitivity).<br>
+          2. Inattentional blindness and selective attention (e.g. Mack &amp; Rock, 1998).<br>
+          3. Visual salience, clutter, and guided attention in interface design.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="sb-selected">No object selected</span>
+    <span id="sb-guides">Guides: 0</span>
+    <span id="sb-nudge">Contextual nudges: 0</span>
+    <span id="sb-mode" style="margin-left:auto;color:#1d4ed8">Redesigned</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const SLIDE_W = 560;
+const SLIDE_H = 380;
+const SLIDE_CX = SLIDE_W / 2;
+const SLIDE_CY = SLIDE_H / 2;
+
+canvas.width = SLIDE_W;
+canvas.height = SLIDE_H;
+
+let mode = 'new';
+let selected = null;
+let dragging = false;
+let offX = 0;
+let offY = 0;
+let anchoredTarget = null;
+let nudgeCount = 0;
+let lastNudgeType = null;
+let highlightedBtns = [];
+
+const elements = [
+  {id:1, type:'rect',   x:50,  y:50,  w:120, h:70, label:'Title block',   fill:'#E6F1FB', stroke:'#378ADD'},
+  {id:2, type:'rect',   x:210, y:50,  w:120, h:70, label:'Image area',    fill:'#EAF3DE', stroke:'#639922'},
+  {id:3, type:'circle', x:370, y:50,  w:80,  h:80, label:'Icon',          fill:'#FAEEDA', stroke:'#BA7517'},
+  {id:4, type:'text',   x:50,  y:180, w:150, h:55, label:'Text block',    fill:'#FBEAF0', stroke:'#D4537E'},
+  {id:5, type:'rect',   x:250, y:180, w:110, h:80, label:'Content block', fill:'#EBF3FB', stroke:'#185FA5'},
+  {id:6, type:'rect',   x:380, y:270, w:130, h:70, label:'← Drag me',     fill:'#F1EFE8', stroke:'#888780'}
+];
+
+let shapeId = 7;
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-old').classList.toggle('active', m === 'old');
+  document.getElementById('btn-new').classList.toggle('active', m === 'new');
+
+  document.getElementById('sb-mode').textContent = m === 'new' ? 'Redesigned' : 'Current design';
+  document.getElementById('sb-mode').style.color = m === 'new' ? '#1d4ed8' : '#dc2626';
+
+  document.getElementById('mode-label').textContent = m === 'new'
+    ? 'Redesigned: guide hierarchy + contextual nudge + centre anchor'
+    : 'Current design: all guides shown with equal weight';
+
+  nudgeCount = 0;
+  lastNudgeType = null;
+  document.getElementById('sb-nudge').textContent = 'Contextual nudges: 0';
+  clearHighlights();
+  hideToast();
+  draw();
+}
+
+function setTool(t) {
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  if (t === 'select') document.getElementById('tool-select').classList.add('active');
+}
+
+function addShape(type) {
+  const configs = {
+    rect:   {fill:'#E6F1FB', stroke:'#378ADD', w:110, h:65, label:'Rectangle'},
+    text:   {fill:'#FBEAF0', stroke:'#D4537E', w:120, h:55, label:'Text'},
+    circle: {fill:'#EAF3DE', stroke:'#639922', w:75,  h:75, label:'Circle'}
+  };
+
+  const c = configs[type];
+  const el = {
+    id: shapeId++,
+    type,
+    x: 60 + Math.random() * 300,
+    y: 60 + Math.random() * 200,
+    ...c
+  };
+
+  elements.push(el);
+  selected = el;
+  updatePanel();
+  draw();
+}
+
+function resetCanvas() {
+  elements.length = 0;
+  elements.push(
+    {id:1, type:'rect',   x:50,  y:50,  w:120, h:70, label:'Title block',   fill:'#E6F1FB', stroke:'#378ADD'},
+    {id:2, type:'rect',   x:210, y:50,  w:120, h:70, label:'Image area',    fill:'#EAF3DE', stroke:'#639922'},
+    {id:3, type:'circle', x:370, y:50,  w:80,  h:80, label:'Icon',          fill:'#FAEEDA', stroke:'#BA7517'},
+    {id:4, type:'text',   x:50,  y:180, w:150, h:55, label:'Text block',    fill:'#FBEAF0', stroke:'#D4537E'},
+    {id:5, type:'rect',   x:250, y:180, w:110, h:80, label:'Content block', fill:'#EBF3FB', stroke:'#185FA5'},
+    {id:6, type:'rect',   x:380, y:270, w:130, h:70, label:'← Drag me',     fill:'#F1EFE8', stroke:'#888780'}
+  );
+
+  selected = null;
+  dragging = false;
+  anchoredTarget = null;
+  nudgeCount = 0;
+  lastNudgeType = null;
+  clearHighlights();
+  hideToast();
+  setAnchorTarget(null);
+
+  document.getElementById('sb-selected').textContent = 'No object selected';
+  document.getElementById('sb-guides').textContent = 'Guides: 0';
+  document.getElementById('sb-nudge').textContent = 'Contextual nudges: 0';
+  document.getElementById('color-preview').innerHTML = '<span style="color:#bbb">— Shown while dragging</span>';
+  document.getElementById('theory-note').textContent = 'Drag an object to compare the current design and the redesigned version.';
+
+  updatePanel();
+  draw();
+}
+
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1,3),16) / 255;
+  let g = parseInt(hex.slice(3,5),16) / 255;
+  let b = parseInt(hex.slice(5,7),16) / 255;
+  const max = Math.max(r,g,b);
+  const min = Math.min(r,g,b);
+  let h, s;
+  let l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslToHex(h, s, l) {
+  h /= 360;
+  s /= 100;
+  l /= 100;
+
+  function hue2rgb(p, q, t) {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  }
+
+  let r, g, b;
+
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  return '#' + [r,g,b].map(x => Math.round(x * 255).toString(16).padStart(2,'0')).join('');
+}
+
+function getGuideColor(strokeHex, alpha) {
+  try {
+    const [h, s, l] = hexToHsl(strokeHex);
+    const compH = (h + 180) % 360;
+    const compL = l > 50 ? Math.max(20, l - 40) : Math.min(80, l + 40);
+    const hex = hslToHex(compH, Math.min(100, s + 20), compL);
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  } catch (e) {
+    return `rgba(37,99,235,${alpha})`;
+  }
+}
+
+function getCompHex(strokeHex) {
+  try {
+    const [h, s, l] = hexToHsl(strokeHex);
+    const compH = (h + 180) % 360;
+    const compL = l > 50 ? Math.max(20, l - 40) : Math.min(80, l + 40);
+    return hslToHex(compH, Math.min(100, s + 20), compL);
+  } catch (e) {
+    return '#2563eb';
+  }
+}
+
+function getSnapInfo(el) {
+  const ex = el.x;
+  const ey = el.y;
+  const ew = el.w;
+  const eh = el.h;
+  const ecx = ex + ew / 2;
+  const ecy = ey + eh / 2;
+  const er = ex + ew;
+  const eb = ey + eh;
+  const T = 12;
+  const T2 = T * 2.5;
+
+  const primary = [];
+  const secondary = [];
+
+  const centreChecks = [
+    {type:'v', pos:SLIDE_CX, dist:Math.abs(ecx - SLIDE_CX), source:'slide-centre'},
+    {type:'h', pos:SLIDE_CY, dist:Math.abs(ecy - SLIDE_CY), source:'slide-centre'}
+  ];
+
+  for (const c of centreChecks) {
+    if (c.dist < T) primary.push(c);
+    else if (c.dist < T2) secondary.push(c);
+  }
+
+  for (const b of elements) {
+    if (b.id === el.id) continue;
+
+    const bx = b.x;
+    const by = b.y;
+    const bw = b.w;
+    const bh = b.h;
+    const bcx = bx + bw / 2;
+    const bcy = by + bh / 2;
+    const br = bx + bw;
+    const bb = by + bh;
+
+    const checks = [
+      {type:'v', pos:bx,  dist:Math.min(Math.abs(ex-bx),  Math.abs(er-bx), Math.abs(ecx-bx)), source:'object'},
+      {type:'v', pos:br,  dist:Math.min(Math.abs(ex-br),  Math.abs(er-br), Math.abs(ecx-br)), source:'object'},
+      {type:'v', pos:bcx, dist:Math.abs(ecx-bcx), source:'object'},
+      {type:'h', pos:by,  dist:Math.min(Math.abs(ey-by),  Math.abs(eb-by), Math.abs(ecy-by)), source:'object'},
+      {type:'h', pos:bb,  dist:Math.min(Math.abs(ey-bb),  Math.abs(eb-bb), Math.abs(ecy-bb)), source:'object'},
+      {type:'h', pos:bcy, dist:Math.abs(ecy-bcy), source:'object'}
+    ];
+
+    for (const c of checks) {
+      if (c.dist < T) primary.push(c);
+      else if (c.dist < T2) secondary.push(c);
+    }
+  }
+
+  return { primary, secondary };
+}
+
+function getAnchorTarget() {
+  return anchoredTarget;
+}
+
+function setAnchorTarget(target) {
+  anchoredTarget = target;
+  const label = document.getElementById('anchor-label');
+  const hint = document.getElementById('align-hint');
+
+  if (!target) {
+    label.textContent = 'None selected';
+    hint.textContent = 'Double-click an object to set it as the alignment target';
+    hint.style.color = '#999';
+    return;
+  }
+
+  label.textContent = target.kind === 'slide-centre' ? 'Slide centre' : target.label;
+  hint.textContent = target.kind === 'slide-centre'
+    ? 'Alignment will use the slide centre as the reference'
+    : `Alignment will use “${target.label}” as the reference`;
+  hint.style.color = 'rgb(5,150,105)';
+}
+
+function getNearAlignType(el, target) {
+  const ecx = el.x + el.w / 2;
+  const ecy = el.y + el.h / 2;
+  const T = 20;
+
+  if (!target) return null;
+
+  if (target.kind === 'slide-centre') {
+    const candidates = [
+      { type:'center-h', dist:Math.abs(ecx - SLIDE_CX), targetLabel:'Slide centre' },
+      { type:'center-v', dist:Math.abs(ecy - SLIDE_CY), targetLabel:'Slide centre' }
+    ].sort((a,b) => a.dist - b.dist);
+
+    return candidates[0] && candidates[0].dist < T ? candidates[0] : null;
+  }
+
+  if (target.kind === 'element') {
+    const ref = target.element;
+    const bcx = ref.x + ref.w / 2;
+    const bcy = ref.y + ref.h / 2;
+
+    const candidates = [
+      { type:'center-h', dist:Math.abs(ecx - bcx), targetLabel:ref.label },
+      { type:'center-v', dist:Math.abs(ecy - bcy), targetLabel:ref.label },
+      { type:'left',     dist:Math.abs(el.x - ref.x), targetLabel:ref.label },
+      { type:'top',      dist:Math.abs(el.y - ref.y), targetLabel:ref.label },
+      { type:'right',    dist:Math.abs((el.x + el.w) - (ref.x + ref.w)), targetLabel:ref.label },
+      { type:'bottom',   dist:Math.abs((el.y + el.h) - (ref.y + ref.h)), targetLabel:ref.label }
+    ].sort((a,b) => a.dist - b.dist);
+
+    return candidates[0] && candidates[0].dist < T ? candidates[0] : null;
+  }
+
+  return null;
+}
+
+function applyAlign(type) {
+  if (!selected) return;
+  const target = getAnchorTarget();
+  if (!target) return;
+
+  let ref = null;
+  let scx = SLIDE_CX;
+  let scy = SLIDE_CY;
+
+  if (target.kind === 'element') {
+    ref = target.element;
+    scx = ref.x + ref.w / 2;
+    scy = ref.y + ref.h / 2;
+  }
+
+  if (type === 'left' && ref)      selected.x = ref.x;
+  if (type === 'right' && ref)     selected.x = ref.x + ref.w - selected.w;
+  if (type === 'center-h')         selected.x = scx - selected.w / 2;
+  if (type === 'top' && ref)       selected.y = ref.y;
+  if (type === 'bottom' && ref)    selected.y = ref.y + ref.h - selected.h;
+  if (type === 'center-v')         selected.y = scy - selected.h / 2;
+
+  constrainElement(selected);
+  updatePanel();
+  draw();
+}
+
+const btnMap = {
+  'center-h':'ab-tc',
+  'center-v':'ab-mc',
+  'left':'ab-tl',
+  'right':'ab-tr',
+  'top':'ab-ml',
+  'bottom':'ab-mr'
+};
+
+function highlightAlignBtn(type) {
+  clearHighlights();
+  const id = btnMap[type];
+  if (id) {
+    document.getElementById(id).classList.add('highlighted');
+    highlightedBtns = [id];
+  }
+}
+
+function clearHighlights() {
+  highlightedBtns.forEach(id => document.getElementById(id)?.classList.remove('highlighted'));
+  highlightedBtns = [];
+}
+
+function showToast(text, cx, cy) {
+  const toast = document.getElementById('nudge-toast');
+  const wrap = document.getElementById('canvas-wrap');
+  const wRect = wrap.getBoundingClientRect();
+  const cRect = canvas.getBoundingClientRect();
+  const scale = canvas.width / cRect.width;
+
+  toast.style.left = (cRect.left - wRect.left + cx / scale - 60) + 'px';
+  toast.style.top  = (cRect.top  - wRect.top  + cy / scale - 38) + 'px';
+  toast.textContent = text;
+  toast.style.opacity = '1';
+}
+
+function hideToast() {
+  document.getElementById('nudge-toast').style.opacity = '0';
+}
+
+function drawEl(el, isSel, accentColor) {
+  const {x,y,w,h,type,label,fill,stroke} = el;
+  const borderColor = isSel ? (accentColor || '#2563EB') : stroke;
+
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = isSel ? 2 : 1;
+  ctx.beginPath();
+
+  if (type === 'circle') {
+    ctx.ellipse(x + w/2, y + h/2, w/2, h/2, 0, 0, Math.PI * 2);
+  } else {
+    ctx.roundRect(x, y, w, h, 5);
+  }
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = borderColor;
+  ctx.font = (isSel ? '500 ' : '') + '12px -apple-system,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w/2, y + h/2);
+
+  if (isSel) {
+    const handles = [
+      [x,y], [x+w/2,y], [x+w,y], [x+w,y+h/2],
+      [x+w,y+h], [x+w/2,y+h], [x,y+h], [x,y+h/2]
+    ];
+
+    handles.forEach(([hx,hy]) => {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
+}
+
+function drawCentreAnchor(compHex) {
+  if (mode !== 'new') return;
+
+  ctx.save();
+  const isAnchored = anchoredTarget && anchoredTarget.kind === 'slide-centre';
+
+  ctx.strokeStyle = isAnchored
+    ? 'rgba(5,150,105,0.55)'
+    : (compHex ? compHex + '55' : 'rgba(37,99,235,0.22)');
+  ctx.lineWidth = isAnchored ? 1.4 : 1;
+  ctx.setLineDash([3,4]);
+
+  ctx.beginPath();
+  ctx.moveTo(SLIDE_CX, 0);
+  ctx.lineTo(SLIDE_CX, SLIDE_H);
+  ctx.moveTo(0, SLIDE_CY);
+  ctx.lineTo(SLIDE_W, SLIDE_CY);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.fillStyle = isAnchored
+    ? 'rgba(5,150,105,0.95)'
+    : (compHex ? compHex + '99' : 'rgba(37,99,235,0.6)');
+
+  ctx.beginPath();
+  ctx.arc(SLIDE_CX, SLIDE_CY, isAnchored ? 4 : 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isAnchored ? 'Anchored centre' : 'Slide centre', SLIDE_CX + 8, SLIDE_CY - 10);
+
+  ctx.restore();
+}
+
+function drawPersistentAnchor() {
+  const target = getAnchorTarget();
+  const anchoredEl = target && target.kind === 'element' ? target.element : null;
+
+  if (mode === 'new' && anchoredEl) {
+    ctx.save();
+    ctx.setLineDash([5,3]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(5,150,105,0.75)';
+    ctx.beginPath();
+    ctx.roundRect(anchoredEl.x - 3, anchoredEl.y - 3, anchoredEl.w + 6, anchoredEl.h + 6, 7);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawGuideLine(line, strokeStyle, width = 1, dashed = false) {
+  ctx.save();
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = width;
+  ctx.setLineDash(dashed ? [4,4] : []);
+  ctx.beginPath();
+
+  if (line.type === 'v') {
+    ctx.moveTo(line.pos, 0);
+    ctx.lineTo(line.pos, SLIDE_H);
+  } else {
+    ctx.moveTo(0, line.pos);
+    ctx.lineTo(SLIDE_W, line.pos);
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawOldModeGuides(primary, secondary) {
+  const allGuides = [...primary, ...secondary];
+
+  for (const l of allGuides) {
+    drawGuideLine(l, 'rgba(220,38,38,0.78)', 1, false);
+  }
+
+  document.getElementById('sb-guides').textContent = `Guides: ${allGuides.length}`;
+  document.getElementById('color-preview').innerHTML =
+    '<span style="color:#999">Uniform red guides with equal visual weight</span>';
+  document.getElementById('theory-note').textContent =
+    'The current design shows all candidate guides with similar emphasis, which can increase clutter and make the intended reference less explicit.';
+
+  clearHighlights();
+  hideToast();
+  lastNudgeType = null;
+}
+
+function drawNewModeGuides(primary, secondary) {
+  const compHex = getCompHex(selected.stroke);
+  const secColor = getGuideColor(selected.stroke, 0.22);
+  const priColor = getGuideColor(selected.stroke, 0.88);
+  const lblColor = getGuideColor(selected.stroke, 0.72);
+
+  document.getElementById('color-preview').innerHTML =
+    `<div style="width:13px;height:13px;border-radius:3px;background:${selected.stroke};flex-shrink:0;border:0.5px solid rgba(0,0,0,0.1)"></div>
+     <span style="color:#bbb">→</span>
+     <div style="width:13px;height:13px;border-radius:3px;background:${compHex};flex-shrink:0;border:0.5px solid rgba(0,0,0,0.1)"></div>
+     <span style="color:#999">${selected.stroke} → ${compHex}</span>`;
+
+  for (const l of secondary) {
+    drawGuideLine(l, secColor, 0.8, true);
+  }
+
+  for (const l of primary.slice(0, 3)) {
+    drawGuideLine(l, priColor, 1.5, false);
+
+    ctx.save();
+    ctx.fillStyle = lblColor;
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    const isSlideCentre = l.source === 'slide-centre';
+    const label = isSlideCentre ? 'centre' : (l.type === 'v' ? `x=${Math.round(l.pos)}` : `y=${Math.round(l.pos)}`);
+    const lx = l.type === 'v' ? l.pos + 4 : 6;
+    const ly = l.type === 'v' ? 10 : l.pos - 6;
+    ctx.fillText(label, lx, ly);
+    ctx.restore();
+  }
+
+  document.getElementById('sb-guides').textContent =
+    `Guides: ${Math.min(primary.length, 3)} primary + ${secondary.length} secondary`;
+
+  const target = getAnchorTarget();
+  const nearInfo = getNearAlignType(selected, target);
+
+  if (nearInfo && nearInfo.type !== lastNudgeType) {
+    nudgeCount++;
+    lastNudgeType = nearInfo.type;
+    document.getElementById('sb-nudge').textContent = `Contextual nudges: ${nudgeCount}`;
+    highlightAlignBtn(nearInfo.type);
+
+    const labels = {
+      'center-h':'centre horizontally',
+      'center-v':'centre vertically',
+      'left':'align left edge',
+      'right':'align right edge',
+      'top':'align top edge',
+      'bottom':'align bottom edge'
+    };
+
+    showToast(`${nearInfo.targetLabel} — ${labels[nearInfo.type]}`, selected.x + selected.w/2, selected.y);
+
+    document.getElementById('theory-note').textContent = nearInfo.targetLabel === 'Slide centre'
+      ? 'A light centre anchor supports spatial reference and makes the reference frame explicit.'
+      : 'The selected anchor stays visible, so alignment actions are always interpreted relative to a clear reference target.';
+  } else if (!nearInfo) {
+    lastNudgeType = null;
+    clearHighlights();
+    hideToast();
+    document.getElementById('theory-note').textContent =
+      'The redesign reduces ambiguity by making the alignment target explicit before any button-based action is applied.';
+  }
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+  ctx.lineWidth = 0.5;
+
+  for (let i = 40; i < SLIDE_W; i += 40) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i, SLIDE_H);
+    ctx.stroke();
+  }
+
+  for (let i = 40; i < SLIDE_H; i += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, i);
+    ctx.lineTo(SLIDE_W, i);
+    ctx.stroke();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, SLIDE_W, SLIDE_H);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, SLIDE_W, SLIDE_H);
+
+  drawGrid();
+  drawCentreAnchor(selected && mode === 'new' ? getCompHex(selected.stroke) : null);
+  drawPersistentAnchor();
+
+  if (dragging && selected) {
+    const { primary, secondary } = getSnapInfo(selected);
+
+    if (mode === 'new') {
+      drawNewModeGuides(primary, secondary);
+    } else {
+      drawOldModeGuides(primary, secondary);
+    }
+  } else {
+    document.getElementById('sb-guides').textContent = 'Guides: 0';
+    document.getElementById('color-preview').innerHTML = '<span style="color:#bbb">— Shown while dragging</span>';
+    hideToast();
+    clearHighlights();
+    lastNudgeType = null;
+
+    if (!selected) {
+      document.getElementById('theory-note').textContent =
+        'Drag an object to compare the current design and the redesigned version.';
+    }
+  }
+
+  for (const el of elements) {
+    const isSel = selected?.id === el.id;
+    const accent = (isSel && dragging && mode === 'new') ? getCompHex(el.stroke) : null;
+    drawEl(el, isSel, accent);
+  }
+}
+
+function getScale() {
+  return canvas.width / canvas.getBoundingClientRect().width;
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const s = getScale();
+  return {
+    x: ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) * s,
+    y: ((e.touches ? e.touches[0].clientY : e.clientY) - r.top) * s
+  };
+}
+
+function pointHitsElement(x, y, el) {
+  if (el.type === 'circle') {
+    const rx = el.w / 2;
+    const ry = el.h / 2;
+    const cx = el.x + rx;
+    const cy = el.y + ry;
+    const norm = ((x - cx) * (x - cx)) / (rx * rx) + ((y - cy) * (y - cy)) / (ry * ry);
+    return norm <= 1;
+  }
+
+  return x >= el.x && x <= el.x + el.w && y >= el.y && y <= el.y + el.h;
+}
+
+function findHitElement(x, y) {
+  for (let i = elements.length - 1; i >= 0; i--) {
+    if (pointHitsElement(x, y, elements[i])) return elements[i];
+  }
+  return null;
+}
+
+function constrainElement(el) {
+  el.w = Math.max(20, el.w);
+  el.h = Math.max(20, el.h);
+  el.x = Math.max(0, Math.min(SLIDE_W - el.w, el.x));
+  el.y = Math.max(0, Math.min(SLIDE_H - el.h, el.y));
+}
+
+canvas.addEventListener('mousedown', e => {
+  const {x, y} = getPos(e);
+  const hit = findHitElement(x, y);
+
+  selected = hit;
+
+  if (hit) {
+    dragging = true;
+    offX = x - hit.x;
+    offY = y - hit.y;
+    canvas.style.cursor = 'grabbing';
+  } else {
+    dragging = false;
+  }
+
+  updatePanel();
+  draw();
+});
+
+canvas.addEventListener('dblclick', e => {
+  const {x, y} = getPos(e);
+  const centreDist = Math.hypot(x - SLIDE_CX, y - SLIDE_CY);
+
+  if (centreDist < 20) {
+    setAnchorTarget({ kind: 'slide-centre' });
+    draw();
+    return;
+  }
+
+  const hit = findHitElement(x, y);
+
+  if (!hit) {
+    setAnchorTarget(null);
+    draw();
+    return;
+  }
+
+  setAnchorTarget({
+    kind: 'element',
+    element: hit,
+    label: hit.label
+  });
+
+  draw();
+});
+
+canvas.addEventListener('touchstart', e => {
+  const {x, y} = getPos(e);
+  const hit = findHitElement(x, y);
+
+  selected = hit;
+
+  if (hit) {
+    dragging = true;
+    offX = x - hit.x;
+    offY = y - hit.y;
+    e.preventDefault();
+  }
+
+  updatePanel();
+  draw();
+}, {passive:false});
+
+window.addEventListener('mousemove', e => {
+  if (!dragging || !selected) return;
+
+  const {x, y} = getPos(e);
+  selected.x = x - offX;
+  selected.y = y - offY;
+  constrainElement(selected);
+  updatePanel();
+  draw();
+});
+
+window.addEventListener('touchmove', e => {
+  if (!dragging || !selected) return;
+
+  const {x, y} = getPos(e);
+  selected.x = x - offX;
+  selected.y = y - offY;
+  constrainElement(selected);
+  updatePanel();
+  draw();
+  e.preventDefault();
+}, {passive:false});
+
+window.addEventListener('mouseup', () => {
+  if (dragging) {
+    dragging = false;
+    canvas.style.cursor = 'default';
+  }
+
+  if (selected) {
+    document.getElementById('sb-selected').textContent = `Selected: ${selected.label}`;
+  }
+
+  draw();
+});
+
+window.addEventListener('touchend', () => {
+  dragging = false;
+  draw();
+});
+
+function updatePanel() {
+  if (!selected) {
+    ['px','py','pw','ph'].forEach(id => document.getElementById(id).value = 0);
+    return;
+  }
+
+  document.getElementById('px').value = Math.round(selected.x);
+  document.getElementById('py').value = Math.round(selected.y);
+  document.getElementById('pw').value = Math.round(selected.w);
+  document.getElementById('ph').value = Math.round(selected.h);
+  document.getElementById('sb-selected').textContent = `Selected: ${selected.label}`;
+}
+
+function updateFromPanel() {
+  if (!selected) return;
+
+  selected.w = Math.max(20, parseInt(document.getElementById('pw').value) || 20);
+  selected.h = Math.max(20, parseInt(document.getElementById('ph').value) || 20);
+  selected.x = parseInt(document.getElementById('px').value) || 0;
+  selected.y = parseInt(document.getElementById('py').value) || 0;
+
+  constrainElement(selected);
+  updatePanel();
+  draw();
+}
+
+draw();
+</script>
+</body>
+</html>
