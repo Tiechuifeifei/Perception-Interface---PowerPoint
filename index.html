@@ -214,16 +214,14 @@ h1 {
 
 <div id="app">
   <div id="topbar">
-    <span class="tb-label">Compare modes</span>
-    <button class="tb-btn" id="btn-old" onclick="setMode('old')">Current design</button>
-    <button class="tb-btn active" id="btn-new" onclick="setMode('new')">Redesigned</button>
+    <span class="tb-label">Prototype tools</span>
     <div class="tb-sep"></div>
     <button class="tb-btn" onclick="addShape('rect')">＋ Rectangle</button>
     <button class="tb-btn" onclick="addShape('text')">＋ Text</button>
     <button class="tb-btn" onclick="addShape('circle')">＋ Circle</button>
     <div class="tb-sep"></div>
     <button class="tb-btn" onclick="resetCanvas()">Reset</button>
-    <span id="mode-label">Redesigned: guide hierarchy + contextual nudge + centre anchor</span>
+    <span id="mode-label">Guide hierarchy + contextual nudge + centre anchor</span>
   </div>
 
   <div id="main">
@@ -283,7 +281,7 @@ h1 {
 
       <div class="panel-section" style="flex:1">
         <div class="panel-title">Design rationale</div>
-        <div id="theory-note">Drag an object to compare the two modes.</div>
+        <div id="theory-note">Drag an object to explore guide hierarchy, centre anchoring, and contextual nudges.</div>
         <div style="margin-top:12px;padding:8px;background:#f8f8f6;border-radius:6px">
           <div style="font-size:10px;color:#aaa;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">Guide colour adaptation</div>
           <div id="color-preview" style="display:flex;align-items:center;gap:8px;font-size:11px;color:#999">— Idle</div>
@@ -302,7 +300,7 @@ h1 {
     <span id="sb-selected">No object selected</span>
     <span id="sb-guides">Guides: 0</span>
     <span id="sb-nudge">Contextual nudges: 0</span>
-    <span id="sb-mode" style="margin-left:auto;color:#1d4ed8">Redesigned</span>
+    <span id="sb-mode" style="margin-left:auto;color:#1d4ed8">Alignment redesign</span>
   </div>
 </div>
 
@@ -319,7 +317,6 @@ const SNAP_THRESHOLD = 8;
 canvas.width = SLIDE_W;
 canvas.height = SLIDE_H;
 
-let mode = 'new';
 let selected = null;
 let dragging = false;
 let offX = 0;
@@ -339,23 +336,6 @@ const elements = [
 ];
 
 let shapeId = 7;
-
-function setMode(m) {
-  mode = m;
-  document.getElementById('btn-old').classList.toggle('active', m === 'old');
-  document.getElementById('btn-new').classList.toggle('active', m === 'new');
-  document.getElementById('sb-mode').textContent = m === 'new' ? 'Redesigned' : 'Current design';
-  document.getElementById('sb-mode').style.color = m === 'new' ? '#1d4ed8' : '#dc2626';
-  document.getElementById('mode-label').textContent = m === 'new'
-    ? 'Redesigned: guide hierarchy + contextual nudge + centre anchor'
-    : 'Current design: all guides shown with equal weight';
-  nudgeCount = 0;
-  lastNudgeType = null;
-  document.getElementById('sb-nudge').textContent = 'Contextual nudges: 0';
-  clearHighlights();
-  hideToast();
-  draw();
-}
 
 function setTool(t) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -404,7 +384,7 @@ function resetCanvas() {
   document.getElementById('sb-guides').textContent = 'Guides: 0';
   document.getElementById('sb-nudge').textContent = 'Contextual nudges: 0';
   document.getElementById('color-preview').innerHTML = '<span style="color:#bbb">— Shown while dragging</span>';
-  document.getElementById('theory-note').textContent = 'Drag an object to compare the current design and the redesigned version.';
+  document.getElementById('theory-note').textContent = 'Drag an object to explore guide hierarchy, centre anchoring, and contextual nudges.';
   updatePanel();
   draw();
 }
@@ -795,8 +775,6 @@ function drawEl(el, isSel, accentColor) {
 }
 
 function drawCentreAnchor(compHex) {
-  if (mode !== 'new') return;
-
   ctx.save();
   const isAnchored = anchoredTarget && anchoredTarget.kind === 'slide-centre';
 
@@ -830,7 +808,7 @@ function drawPersistentAnchor() {
   const target = getAnchorTarget();
   const anchoredEl = target && target.kind === 'element' ? target.element : null;
 
-  if (mode === 'new' && anchoredEl) {
+  if (anchoredEl) {
     ctx.save();
     ctx.setLineDash([5,3]);
     ctx.lineWidth = 1.5;
@@ -845,7 +823,6 @@ function drawPersistentAnchor() {
 function drawGuideLine(line, strokeStyle, width = 1, dashed = false) {
   ctx.save();
 
-  // halo
   ctx.strokeStyle = 'rgba(255,255,255,0.9)';
   ctx.lineWidth = width + 1.8;
   ctx.setLineDash(dashed ? [4,4] : []);
@@ -859,7 +836,6 @@ function drawGuideLine(line, strokeStyle, width = 1, dashed = false) {
   }
   ctx.stroke();
 
-  // actual line
   ctx.strokeStyle = strokeStyle;
   ctx.lineWidth = width;
   ctx.setLineDash(dashed ? [4,4] : []);
@@ -935,7 +911,6 @@ function drawSegmentedGuide(line, style) {
   function drawPart(start, end, color, width, dashed) {
     if (end <= start) return;
 
-    // halo
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = width + 1.8;
@@ -951,7 +926,6 @@ function drawSegmentedGuide(line, style) {
     ctx.stroke();
     ctx.restore();
 
-    // actual line
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = width;
@@ -971,24 +945,6 @@ function drawSegmentedGuide(line, style) {
   drawPart(fullStart, solidStart, style.dashedColor, style.dashedWidth, true);
   drawPart(solidStart, solidEnd, style.solidColor, style.solidWidth, false);
   drawPart(solidEnd, fullEnd, style.dashedColor, style.dashedWidth, true);
-}
-
-function drawOldModeGuides(primary, secondary) {
-  const allGuides = [...primary, ...secondary];
-
-  for (const l of allGuides) {
-    drawGuideLine(l, 'rgba(220,38,38,0.78)', 1, false);
-  }
-
-  document.getElementById('sb-guides').textContent = `Guides: ${allGuides.length}`;
-  document.getElementById('color-preview').innerHTML =
-    '<span style="color:#999">Uniform red guides with equal visual weight</span>';
-  document.getElementById('theory-note').textContent =
-    'The current design shows all candidate guides with similar emphasis, which can increase clutter and make the intended reference less explicit.';
-
-  clearHighlights();
-  hideToast();
-  lastNudgeType = null;
 }
 
 function drawNewModeGuides(primary, secondary) {
@@ -1097,16 +1053,11 @@ function draw() {
   ctx.fillRect(0, 0, SLIDE_W, SLIDE_H);
 
   drawGrid();
-  drawCentreAnchor(selected && mode === 'new' ? getCompHex(selected.stroke) : null);
+  drawCentreAnchor(selected ? getCompHex(selected.stroke) : null);
 
   if (dragging && selected) {
     const { primary, secondary } = getSnapInfo(selected);
-
-    if (mode === 'new') {
-      drawNewModeGuides(primary, secondary);
-    } else {
-      drawOldModeGuides(primary, secondary);
-    }
+    drawNewModeGuides(primary, secondary);
   } else {
     document.getElementById('sb-guides').textContent = 'Guides: 0';
     document.getElementById('color-preview').innerHTML = '<span style="color:#bbb">— Shown while dragging</span>';
@@ -1116,13 +1067,13 @@ function draw() {
 
     if (!selected) {
       document.getElementById('theory-note').textContent =
-        'Drag an object to compare the current design and the redesigned version.';
+        'Drag an object to explore guide hierarchy, centre anchoring, and contextual nudges.';
     }
   }
 
   for (const el of elements) {
     const isSel = selected?.id === el.id;
-    const accent = (isSel && dragging && mode === 'new') ? getCompHex(el.stroke) : null;
+    const accent = (isSel && dragging) ? getCompHex(el.stroke) : null;
     drawEl(el, isSel, accent);
   }
 
@@ -1239,9 +1190,7 @@ window.addEventListener('mousemove', e => {
   selected.y = y - offY;
   constrainElement(selected);
 
-  if (mode === 'new') {
-    applyAutoSnap(selected);
-  }
+  applyAutoSnap(selected);
 
   updatePanel();
   draw();
@@ -1255,9 +1204,7 @@ window.addEventListener('touchmove', e => {
   selected.y = y - offY;
   constrainElement(selected);
 
-  if (mode === 'new') {
-    applyAutoSnap(selected);
-  }
+  applyAutoSnap(selected);
 
   updatePanel();
   draw();
